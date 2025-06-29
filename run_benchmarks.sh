@@ -54,9 +54,9 @@ for PROGRAM in "${VERSIONS[@]}"; do
     # main loop
     for DEGREE in "${DEGREES[@]}"; do
         if [ "$DEGREE" -eq 10 ]; then
-            POINTS_LIST=("${POINTS_N1[@]}")
+            POINTS_LIST=("${BASE_N1[@]}")
         else
-            POINTS_LIST=("${POINTS_N2[@]}")
+            POINTS_LIST=("${BASE_N2[@]}")
         fi
         for POINTS in "${POINTS_LIST[@]}"; do
             metrics "$DEGREE" "$POINTS"
