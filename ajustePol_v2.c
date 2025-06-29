@@ -4,6 +4,7 @@
 #include <fenv.h>
 #include <math.h>
 #include <stdint.h>
+#include <likwid.h>
 
 #include "utils.h"
 
@@ -13,10 +14,10 @@
 //   AJUSTE DE CURVAS
 /////////////////////////////////////////////////////////////////////////////////////
 
-void montaSL(double **A, double *b, int n, long long int p, double *x, double *y) {
-    for (int i = 0; i < n; ++i) {
+void montaSL(double **A, double *b, long long int n, long long int p, double *x, double *y) {
+    for (long long int i = 0; i < n; ++i) {
         b[i] = 0.0;
-        for (int j = 0; j < n; ++j) {
+        for (long long int j = 0; j < n; ++j) {
             A[i][j] = 0.0;
         }
     }
@@ -29,7 +30,7 @@ void montaSL(double **A, double *b, int n, long long int p, double *x, double *y
             vetorPow[i] = vetorPow[i - 1] * x[k];
         }
 
-        for (int i = 0; i < n; i += UNROLL) {
+        for (long long int i = 0; i < n; i += UNROLL) {
             b[i] += vetorPow[i]*y[k];
             if (i+1< n) b[i+1] += vetorPow[i+1]*y[k];
 
@@ -37,18 +38,19 @@ void montaSL(double **A, double *b, int n, long long int p, double *x, double *y
                 A[i][j] += vetorPow[i+j];
                 if (j+1 < n) A[i][j+1] += vetorPow[i+j+1]; 
                 if (i+1 < n){
-                A[i+1][j] += vetorPow[i + 1 + j];
-                if (j+1 < n) A[i+1][j+1] += vetorPow[i+1+j+1];
+                    A[i+1][j] += vetorPow[i + 1 + j];
+                    if (j+1 < n) A[i+1][j+1] += vetorPow[i+1+j+1];
+                }
             }
         }
     }
     free(vetorPow);
 }
 
-void eliminacaoGauss(double **A, double *b, int n) {
-    for (int i = 0; i < n; ++i) {
-        int iMax = i;
-        for (int k = i+1; k < n; ++k)
+void eliminacaoGauss(double **A, double *b, long long int n) {
+    for (long long int i = 0; i < n; ++i) {
+        long long int iMax = i;
+        for (long long int k = i+1; k < n; ++k)
             if (A[k][i] > A[iMax][i])
 	            iMax = k;
 
@@ -63,40 +65,41 @@ void eliminacaoGauss(double **A, double *b, int n) {
             b[iMax] = aux;
         }
 
-        for (int k = i + 1; k < n; ++k) {
+        for (long long int k = i + 1; k < n; ++k) {
             double m = A[k][i] / A[i][i];
             A[k][i] = 0.0;
             
-            for (int j = i + 1; j <= n - 1; j += UNROLL) {
-                A[k][j] -= A[i][j]*m;
-                A[k][j+1] -= A[i][j+1]*m;
+           for (long long int j = i + 1; j <= n - UNROLL; j += UNROLL) {
+                for (long long int u = 0; u < UNROLL; ++u) 
+                    A[k][j + u] -= A[i][j + u] * m;
             }
-            if (n - i - 1) % 2 != 0)
-                A[k][n-1] -= A[i][n-1]*m;
 
-            b[k] -= b[i]*m;
+            for (long long int j = n - ((n - i - 1) % UNROLL); j < n; ++j) 
+                A[k][j] -= A[i][j] * m;
+
+            b[k] -= b[i] * m;
         }
     }
 }
 
-void retrossubs(double **A, double *b, double *x, int n) {
-    for (int i = n-1; i >= 0; --i) {
+void retrossubs(double **A, double *b, double *x, long long int n) {
+    for (long long int i = n-1; i >= 0; --i) {
         x[i] = b[i];
-        for (int j = i+1; j < n + 1; j += UNROLL) {
-            x[i] -= A[i][j]*x[j];
-            x[i + 1] -= A[i][j]*x[j + 1];
+        for (long long int j = i + 1; j <= n - UNROLL; j += UNROLL) {
+            for (long long int u = 0; u < UNROLL; ++u) {
+                x[i] -= A[i][j + u] * x[j + u];
+            }
         }
-        if ((n-i-1) % 2)
-            x[i] -= A[i][n-1]*x[n-1];
-        }
+        for (long long int j = n - ((n - i - 1) % UNROLL); j < n; ++j) 
+            x[i] -= A[i][j] * x[j];
         x[i] /= A[i][i];
     }
 }
 
-double P(double x, int N, double *alpha) {
+double P(double x, long long int N, double *alpha) {
     double Px = alpha[0];
     double potX = x;
-    for (int i = 1; i <= N; ++i) {
+    for (long long int i = 1; i <= N; ++i) {
         Px += alpha[i]*potX;
         potX *= x;
     }
@@ -105,10 +108,10 @@ double P(double x, int N, double *alpha) {
 
 int main() {
 
-  int N, n;
+  long long int N, n;
   long long int K, p;
 
-  scanf("%d %lld", &N, &K);
+  scanf("%lld %lld", &N, &K);
   p = K;   // quantidade de pontos
   n = N+1; // tamanho do SL (grau N + 1)
 
@@ -120,7 +123,7 @@ int main() {
     scanf("%lf %lf", x+i, y+i);
 
   double **A = (double **) malloc(sizeof(double *)*n);
-  for (int i = 0; i < n; ++i)
+  for (long long int i = 0; i < n; ++i)
     A[i] = (double *) malloc(sizeof(double)*n);
   
   double *b = (double *) malloc(sizeof(double)*n);
@@ -145,7 +148,7 @@ int main() {
   LIKWID_MARKER_CLOSE;
 
   // Imprime coeficientes
-  for (int i = 0; i < n; ++i)
+  for (long long int i = 0; i < n; ++i)
     printf("%1.15e ", alpha[i]);
   puts("");
 
@@ -156,6 +159,16 @@ int main() {
 
   // Imprime os tempos
   printf("%lld %1.10e %1.10e\n", K, tSL, tEG);
+
+  // Libera a memoria alocada
+  for (long long int i = 0; i < n; ++i){
+    free(A[i]);
+  }
+  free(A);
+  free(b);
+  free(alpha);
+  free(x);
+  free(y);
 
   return 0;
 }

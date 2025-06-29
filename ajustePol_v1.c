@@ -4,6 +4,7 @@
 #include <fenv.h>
 #include <math.h>
 #include <stdint.h>
+#include <likwid.h>
 
 #include "utils.h"
 
@@ -11,7 +12,7 @@
 //   AJUSTE DE CURVAS
 /////////////////////////////////////////////////////////////////////////////////////
 
-void montaSL(double **A, double *b, int n, long long int p, double *x, double *y) {
+void montaSL(double **A, double *b, long long int n, long long int p, double *x, double *y) {
   for (long long int i = 0; i < n; ++i)
     for (long long int j = 0; j < n; ++j) {
       A[i][j] = 0.0;
@@ -54,7 +55,7 @@ void eliminacaoGauss(double **A, double *b, int n) {
   }
 }
 
-void retrossubs(double **A, double *b, double *x, int n) {
+void retrossubs(double **A, double *b, double *x, long long int n) {
   for (long long int i = n-1; i >= 0; --i) {
     x[i] = b[i];
     for (long long int j = i+1; j < n; ++j)
@@ -73,10 +74,10 @@ double P(double x, int N, double *alpha) {
 
 int main() {
 
-  int N, n;
+  long long int N, n;
   long long int K, p;
 
-  scanf("%d %lld", &N, &K);
+  scanf("%lld %lld", &N, &K);
   p = K;   // quantidade de pontos
   n = N+1; // tamanho do SL (grau N + 1)
 
@@ -113,7 +114,7 @@ int main() {
   LIKWID_MARKER_CLOSE;
 
   // Imprime coeficientes
-  for (int i = 0; i < n; ++i)
+  for (long long int i = 0; i < n; ++i)
     printf("%1.15e ", alpha[i]);
   puts("");
 
@@ -124,6 +125,16 @@ int main() {
 
   // Imprime os tempos
   printf("%lld %1.10e %1.10e\n", K, tSL, tEG);
+
+  // Libera a memoria alocada
+  for (long long int i = 0; i < n; ++i){
+    free(A[i]);
+  }
+  free(A);
+  free(b);
+  free(alpha);
+  free(x);
+  free(y);
 
   return 0;
 }
