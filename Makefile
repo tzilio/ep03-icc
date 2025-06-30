@@ -51,8 +51,6 @@ purge:  clean
 
 dist: purge
 	@echo "Gerando arquivo de distribuição ($(DISTDIR).tar) ..."
-	@mkdir -p $(DISTDIR)/graficos
-	@cp -r graficos/* $(DISTDIR)/graficos
-	@cp $(DISTFILES) $(DISTDIR)
+	@ln -s . $(DISTDIR)
 	@tar -chvf $(DISTDIR).tar $(addprefix ./$(DISTDIR)/, $(DISTFILES))
 	@rm -f $(DISTDIR)
