@@ -9,20 +9,19 @@ LIKWID_INC = -I${LIKWID_HOME}/include -DLIKWID_PERFMON
 LIKWID_LIB = -L${LIKWID_HOME}/lib -llikwid
 
 # Compilador
-    CC     = gcc
-    CFLAGS = -O3 -mavx -march=native -Wall -Wextra
-    LFLAGS = -lm
+CC     = gcc
+CFLAGS = -O3 -mavx -march=native -Wall -Wextra
+LFLAGS = -lm
 
-# Lista de arquivos para distribuição.
-# LEMBRE-SE DE ACRESCENTAR OS ARQUIVOS ADICIONAIS SOLICITADOS NO ENUNCIADO DO TRABALHO
-DISTFILES = *.c *.h LEIAME* Makefile run_tests.sh *.gnu likwid-topology.txt *.csv
-DISTDIR = tza23
+# Arquivos para distribuição (somente na raiz)
+DISTFILES = *.c *.h LEIAME* Makefile run_benchmarks.sh topology.txt
+DISTDIR   = tza23
 
 .PHONY: all clean purge dist likwid
 
 all: $(PROGS)
 
-# Regras para programas sem LIKWID
+# --------- Compilação sem LIKWID ----------
 ajustePol_v1: ajustePol_v1.c utils.c
 	$(CC) -o $@ $(CFLAGS) $^ $(LFLAGS)
 
@@ -30,9 +29,9 @@ ajustePol_v2: ajustePol_v2.c utils.c
 	$(CC) -o $@ $(CFLAGS) $^ $(LFLAGS)
 
 gera_entrada: gera_entrada.c
-	$(CC) gera_entrada.c -o gera_entrada
+	$(CC) $^ -o $@
 
-# Regra para compilar programas com suporte ao LIKWID
+# --------- Compilação com LIKWID ----------
 likwid: ajustePol_v1_likwid ajustePol_v2_likwid
 
 ajustePol_v1_likwid: ajustePol_v1.c utils.c
@@ -41,16 +40,23 @@ ajustePol_v1_likwid: ajustePol_v1.c utils.c
 ajustePol_v2_likwid: ajustePol_v2.c utils.c
 	$(CC) -o ajustePol_v2 $(CFLAGS) $(LIKWID_INC) $^ $(LFLAGS) $(LIKWID_LIB)
 
+# --------- Limpeza ----------
 clean:
 	@echo "Limpando sujeira ..."
-	@rm -f *~ *.bak *.o 
+	@rm -f *~ *.bak *.o
 
-purge:  clean
+purge: clean
 	@echo "Limpando tudo ..."
-	@rm -f $(PROGS) *.o a.out $(DISTDIR) $(DISTDIR).tar
+	@rm -f $(PROGS) a.out $(DISTDIR).tgz
+	@rm -rf $(DISTDIR)
 
+# --------- Distribuição ----------
 dist: purge
-	@echo "Gerando arquivo de distribuição ($(DISTDIR).tar) ..."
-	@ln -s . $(DISTDIR)
-	@tar -chvf $(DISTDIR).tar $(addprefix ./$(DISTDIR)/, $(DISTFILES))
-	@rm -f $(DISTDIR)
+	@echo "Gerando arquivo de distribuição ($(DISTDIR).tgz) ..."
+	@mkdir -p $(DISTDIR)/graficos
+	@mkdir -p $(DISTDIR)/resultados
+	@cp -r graficos/*   $(DISTDIR)/graficos
+	@cp -r resultados/* $(DISTDIR)/resultados
+	@cp $(DISTFILES)    $(DISTDIR)
+	@tar -czf $(DISTDIR).tgz $(DISTDIR)
+	@rm -rf $(DISTDIR)
